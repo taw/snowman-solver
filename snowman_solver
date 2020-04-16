@@ -1,0 +1,277 @@
+#!/usr/bin/env ruby
+
+require "set"
+require "pry"
+
+# m - monster
+# M - monster on snow
+class SnowmanState
+  attr_reader :data, :mx, :my
+
+  def initialize(data, mx=nil, my=nil)
+    @data = data.map(&:-@)
+    @mx = mx
+    @my = my
+    # Only on initial load
+    unless @mx and @my
+      @data = @data.map(&:+@)
+      find_monster
+      @data = @data.map(&:-@)
+    end
+  end
+
+  private def find_monster
+    @data.each_with_index do |row, y|
+      row.chars.each_with_index do |char, x|
+        if char == "m"
+          @mx = x
+          @my = y
+          row[x] = "."
+          return
+        elsif char == "M"
+          @mx = x
+          @my = y
+          row[x] = "s"
+          return
+        end
+      end
+    end
+  end
+
+  def [](x,y)
+    return " " if x < 0 or y < 0
+    (@data[y] || [])[x] || " "
+  end
+
+  def move_to(nx, ny, px, py)
+    # When moving there are 3 relevant points
+    # [mx, my] monster
+    # [nx, ny] next
+    # [px, py] push-to
+
+    next_tile = self[nx, ny]
+    push_tile = self[px, py]
+
+    # p [:wat, next_tile, push_tile]
+
+    case next_tile
+    when " "
+      nil
+    when ".", "s"
+      updating(nx, ny)
+    when "1"
+      case push_tile
+      when "."
+        updating(nx, ny, [nx,ny,"."], [px,py,"1"])
+      when "s"
+        updating(nx, ny, [nx,ny,"."], [px,py,"2"])
+      when "2"
+        updating(nx, ny, [nx,ny,"."], [px,py,"3"])
+      when "4"
+        updating(nx, ny, [nx,ny,"."], [px,py,"5"])
+      when "6"
+        updating(nx, ny, [nx,ny,"."], [px,py,"7"])
+      else
+        nil
+      end
+    when "2"
+      case push_tile
+      when "."
+        updating(nx, ny, [nx,ny,"."], [px,py,"2"])
+      when "s"
+        updating(nx, ny, [nx,ny,"."], [px,py,"4"])
+      when "4"
+        updating(nx, ny, [nx,ny,"."], [px,py,"6"])
+      else
+        nil
+      end
+    when "4"
+      case push_tile
+      when "."
+        updating(nx, ny, [nx,ny,"."], [px,py,"4"])
+      when "s"
+        updating(nx, ny, [nx,ny,"."], [px,py,"4"])
+      else
+        nil
+      end
+    when "3"
+      case push_tile
+      when "."
+        updating(mx, my, [nx,ny,"2"], [px,py,"1"])
+      when "s"
+        updating(mx, my, [nx,ny,"2"], [px,py,"2"])
+      else
+        nil
+      end
+    when "5"
+      case push_tile
+      when "."
+        updating(mx, my, [nx,ny,"4"], [px,py,"1"])
+      when "s"
+        updating(mx, my, [nx,ny,"4"], [px,py,"2"])
+      else
+        nil
+      end
+    when "6"
+      case push_tile
+      when "."
+        updating(mx, my, [nx,ny,"4"], [px,py,"2"])
+      when "s"
+        updating(mx, my, [nx,ny,"4"], [px,py,"4"])
+      else
+        nil
+      end
+    # 7 is win already, but for completion
+    when "7"
+      case push_tile
+      when "."
+        updating(mx, my, [nx,ny,"6"], [px,py,"1"])
+      when "s"
+        updating(mx, my, [nx,ny,"6"], [px,py,"2"])
+      else
+        nil
+      end
+    else
+      nil
+    end
+  end
+
+  private def updating(nmx, nmy, *list)
+    new_data = @data.map(&:dup)
+    list.each do |x,y,v|
+      new_data[y][x] = v
+    end
+    SnowmanState.new(new_data, nmx, nmy)
+  end
+
+  def right
+    move_to(@mx+1, @my, @mx+2, @my)
+  end
+
+  def left
+    move_to(@mx-1, @my, @mx-2, @my)
+  end
+
+  def up
+    move_to(@mx, @my-1, @mx, @my-2)
+  end
+
+  def down
+    move_to(@mx, @my+1, @mx, @my+2)
+  end
+
+  def win?
+    !(@data.join =~ /[1-6]/)
+  end
+
+  def moves
+    [
+      ["left", left],
+      ["right", right],
+      ["up", up],
+      ["down", down],
+    ].select{|a,b| b}
+  end
+
+  def self.from_file(path)
+    new(Pathname(path).readlines)
+  end
+
+  def hash
+    [@data, @mx, @my].hash
+  end
+
+  def ==(other)
+    [@data, @mx, @my] == [other.data, other.mx, other.my]
+  end
+
+  def eql?(other)
+    self == other
+  end
+
+  # Make it print better
+  def to_s
+    result = @data.map(&:dup)
+    if result[my][mx] == "s"
+      result[my][mx] = "M"
+    elsif result[my][mx] == "."
+      result[my][mx] = "m"
+    else
+      raise "Bad monster location"
+    end
+    result.join("\n") + "\n\n"
+  end
+end
+
+class SnowmanSolver
+  def initialize(path)
+    initial_state = SnowmanState.from_file(path)
+    @states = {initial_state => ["start", nil]}
+    @queue = [initial_state]
+  end
+
+  def call
+    until @queue.empty?
+      next_state = @queue.shift
+
+      if @states.size % 10000 == 0
+        puts "Q#{@queue.size} S#{@states.size / 1000}"
+        # puts next_state
+      end
+
+      if next_state.win?
+        answer = []
+        cur_state = next_state
+        while cur_state
+          dir, cur_state = @states[cur_state]
+          answer << dir
+        end
+        puts answer.reverse
+        return
+      end
+
+      next_state.moves.each do |dir, state|
+        next if @states[state]
+        @states[state] = [dir, next_state]
+        @queue.push state
+      end
+    end
+
+    puts "There is no way to win this level"
+    # @states.each do |state, how_to_reach|
+    #   puts state
+    # end
+  end
+
+  def manual
+    state = @queue.shift
+    %W[
+      right right
+      up down
+      left left left left
+      up down
+      up left up up right
+
+    ].each do |dir|
+      state = state.send(dir)
+    end
+
+    while true
+      puts state
+      puts "Next? "
+      dir = STDIN.readline.chomp
+      if state.respond_to?(dir)
+        next_state = state.send(dir)
+        state = next_state if next_state
+      end
+    end
+  end
+end
+
+unless ARGV.size == 1
+  STDERR.puts "#{$0} puzzle.txt"
+  exit 1
+end
+
+SnowmanSolver.new(ARGV[0]).call
+# SnowmanSolver.new(ARGV[0]).manual
