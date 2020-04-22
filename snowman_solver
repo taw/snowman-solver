@@ -8,34 +8,10 @@ require "pry"
 class SnowmanState
   attr_reader :data, :mx, :my
 
-  def initialize(data, mx=nil, my=nil)
+  def initialize(data, mx, my)
     @data = data.map(&:-@)
     @mx = mx
     @my = my
-    # Only on initial load
-    unless @mx and @my
-      @data = @data.map(&:+@)
-      find_monster
-      @data = @data.map(&:-@)
-    end
-  end
-
-  private def find_monster
-    @data.each_with_index do |row, y|
-      row.chars.each_with_index do |char, x|
-        if char == "m"
-          @mx = x
-          @my = y
-          row[x] = "."
-          return
-        elsif char == "M"
-          @mx = x
-          @my = y
-          row[x] = "s"
-          return
-        end
-      end
-    end
   end
 
   def [](x,y)
@@ -164,10 +140,6 @@ class SnowmanState
     ].select{|a,b| b}
   end
 
-  def self.from_file(path)
-    new(Pathname(path).readlines)
-  end
-
   def hash
     [@data, @mx, @my].hash
   end
@@ -191,6 +163,30 @@ class SnowmanState
       raise "Bad monster location"
     end
     result.join("\n") + "\n\n"
+  end
+
+  class << self
+    def from_file(path)
+      data = Pathname(path).readlines.map(&:chomp)
+      mx, my = find_monster(data)
+      raise unless mx and my
+      new(data, mx, my)
+    end
+
+    def find_monster(data)
+      data.each_with_index do |row, y|
+        row.chars.each_with_index do |char, x|
+          if char == "m"
+            row[x] = "."
+            return x, y
+          elsif char == "M"
+            row[x] = "s"
+            return x, y
+          end
+        end
+      end
+      raise "Cannot find monster"
+    end
   end
 end
 
