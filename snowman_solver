@@ -9,7 +9,7 @@ class SnowmanState
   attr_reader :data, :mx, :my
 
   def initialize(data, mx, my)
-    @data = data.map(&:-@)
+    @data = data
     @mx = mx
     @my = my
   end
@@ -28,13 +28,9 @@ class SnowmanState
     next_tile = self[nx, ny]
     push_tile = self[px, py]
 
-    # p [:wat, next_tile, push_tile]
-
     case next_tile
-    when " "
-      nil
     when ".", "s"
-      updating(nx, ny)
+      SnowmanState.new(@data, nx, ny)
     when "1"
       case push_tile
       when "."
@@ -108,7 +104,11 @@ class SnowmanState
     list.each do |x,y,v|
       new_data[y][x] = v
     end
-    SnowmanState.new(new_data, nmx, nmy)
+    SnowmanState.new(
+      new_data.map(&:-@),
+      nmx,
+      nmy
+    )
   end
 
   def right
@@ -202,7 +202,11 @@ class SnowmanState
       data = Pathname(path).readlines.map(&:chomp)
       mx, my = find_monster(data)
       raise unless mx and my
-      new(data, mx, my)
+      new(
+        data.map(&:-@),
+        mx,
+        my
+      )
     end
 
     def find_monster(data)
@@ -259,9 +263,6 @@ class SnowmanSolver
     end
 
     puts "There is no way to win this level"
-    # @states.each do |state, how_to_reach|
-    #   puts state
-    # end
   end
 
   def manual
