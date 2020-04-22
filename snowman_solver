@@ -3,8 +3,6 @@
 require "set"
 require "pry"
 
-# m - monster
-# M - monster on snow
 class SnowmanState
   attr_reader :data, :mx, :my
 
@@ -209,6 +207,8 @@ class SnowmanState
       )
     end
 
+    # m - monster
+    # M - monster on snow
     def find_monster(data)
       data.each_with_index do |row, y|
         row.chars.each_with_index do |char, x|
@@ -238,7 +238,7 @@ class SnowmanSolver
       next_state = @queue.shift
 
       if @states.size % 10000 == 0
-        puts "Q#{@queue.size} S#{@states.size / 1000}"
+        puts "Q #{@queue.size} S #{@states.size / 1000}"
         # puts next_state
       end
 
@@ -249,7 +249,7 @@ class SnowmanSolver
           dir, cur_state = @states[cur_state]
           answer << dir
         end
-        puts "FINAL Q#{@queue.size} S#{@states.size}"
+        puts "FINAL Q #{@queue.size} S #{@states.size}"
         puts answer.reverse
         return
       end
