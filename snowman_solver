@@ -121,16 +121,7 @@ class SnowmanState
       else
         nil
       end
-    # 7 is win already, but for completion
-    when "7"
-      case push_tile
-      when "."
-        updating(mx, my, [nx,ny,"6"], [px,py,"1"])
-      when "s"
-        updating(mx, my, [nx,ny,"6"], [px,py,"2"])
-      else
-        nil
-      end
+    # 7 is win already, and can't be pushed
     else
       nil
     end
