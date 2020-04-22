@@ -131,6 +131,38 @@ class SnowmanState
     !(@data.join =~ /[1-6]/)
   end
 
+  def loss?
+    b1 = 0
+    b2 = 0
+    b4 = 0
+    @data.join.each_char do |c|
+      case c
+      when "1"
+        b1 += 1
+      when "2"
+        b2 += 1
+      when "3"
+        b1 += 1
+        b2 += 1
+      when "4"
+        b4 += 1
+      when "5"
+        b1 += 1
+        b4 += 1
+      when "6"
+        b2 += 1
+        b4 += 1
+      # ignore 7s, they don't matter
+      end
+    end
+    balls = b1 + b2 + b4
+    raise unless balls % 3 == 0
+    snowmen = balls / 3
+    return true if b4 > snowmen
+    return true if b4 + b2 > snowmen * 2
+    false
+  end
+
   def moves
     [
       ["left", left],
@@ -213,12 +245,14 @@ class SnowmanSolver
           dir, cur_state = @states[cur_state]
           answer << dir
         end
+        puts "FINAL Q#{@queue.size} S#{@states.size}"
         puts answer.reverse
         return
       end
 
       next_state.moves.each do |dir, state|
         next if @states[state]
+        next if state.loss?
         @states[state] = [dir, next_state]
         @queue.push state
       end
